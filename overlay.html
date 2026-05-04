@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Archipelago Auto-Overlay</title>
+    <style>
+        /* Base pour OBS */
+        body { margin: 0; padding: 20px; height: 100vh; display: flex; flex-direction: column; background: transparent; font-family: 'Segoe UI', sans-serif; overflow: hidden; box-sizing: border-box; }
+        
+        /* Grille des vidéos */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; flex-grow: 1; align-content: start; }
+        .video-box { background: rgba(0,0,0,0.8); border: 2px solid #585b70; border-radius: 12px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .video-header { background: #313244; color: #cdd6f4; padding: 8px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .status-dot { height: 10px; width: 10px; background-color: #f38ba8; border-radius: 50%; display: inline-block; }
+        .status-dot.online { background-color: #a6e3a1; box-shadow: 0 0 8px #a6e3a1; }
+        .iframe-container { width: 100%; aspect-ratio: 16 / 9; background: #11111b; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* Journal des événements (Log) */
+        .log-container { position: absolute; bottom: 20px; left: 20px; width: 450px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+        .log-entry { background: rgba(24, 24, 37, 0.9); color: #cdd6f4; padding: 10px 15px; border-left: 4px solid #89b4fa; border-radius: 4px; font-size: 14px; text-shadow: 1px 1px 2px black; animation: slideIn 0.3s ease-out; opacity: 1; transition: opacity 1s; }
+        
+        /* Alerte DeathLink */
+        #deathlink-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 0, 0, 0.4); border: 15px solid red; z-index: 100; display: none; justify-content: center; align-items: center; pointer-events: none; box-sizing: border-box; }
+        #deathlink-overlay h1 { color: white; font-size: 80px; text-shadow: 0 0 20px red; text-transform: uppercase; font-weight: 900; letter-spacing: 5px; }
+
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes flash { 0% { opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <!-- L'écran rouge de DeathLink -->
+    <div id="deathlink-overlay">
+        <h1>DEATHLINK !</h1>
+    </div>
+
+    <!-- Grille des vidéos -->
+    <div class="grid" id="video-grid"></div>
+
+    <!-- Journal des objets -->
+    <div class="log-container" id="log-box"></div>
+
+    <script>
+        // 1. DÉCODAGE DES DONNÉES DU LIEN OBS
+        const urlParams = new URLSearchParams(window.location.search);
+        const encodedData = urlParams.get('data');
+        
+        if (!encodedData) {
+            document.body.innerHTML = "<h1 style='color:white; text-shadow: 2px 2px black;'>❌ Erreur : Aucune donnée reçue. Générez le lien via le Control Panel.</h1>";
+            throw new Error("No data");
+        }
+
+        const config = JSON.parse(decodeURIComponent(atob(encodedData)));
+        const grid = document.getElementById('video-grid');
+        const logBox = document.getElementById('log-box');
+
+        // 2. PARSEUR VIDÉO UNIVERSEL
+        function getIframeSrc(link) {
+            if (!link) return null;
+            
+            // Twitch
+            if (link.includes('twitch.tv')) {
+                const channel = link.split('/').pop().split('?')[0];
+                return `https://player.twitch.tv/?channel=${channel}&parent=${window.location.hostname || 'localhost'}&muted=true`;
+            }
+            // YouTube
+            if (link.includes('youtube.com') || link.includes('youtu.be')) {
+                let id = link.includes('v=') ? link.split('v=')[1].split('&')[0] : link.split('/').pop();
+                return `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&mute=1`;
+            }
+            // VDO.Ninja ou autre (chargement direct)
+            return link;
+        }
+
+        // 3. GÉNÉRATION DE L'INTERFACE VIDÉO
+        config.players.forEach(player => {
+            const imgSrc = getIframeSrc(player.link);
+            const content = imgSrc 
+                ? `<iframe src="${imgSrc}" allow="autoplay"></iframe>` 
+                : `<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#585b70;">Pas de flux vidéo</div>`;
+            
+            grid.innerHTML += `
+                <div class="video-box" id="player-${player.name.replace(/\s+/g, '-')}">
+                    <div class="video-header">
+                        <span>${player.name}</span>
+                        <span class="status-dot" id="status-${player.name.replace(/\s+/g, '-')}"></span>
+                    </div>
+                    <div class="iframe-container">
+                        ${content}
+                    </div>
+                </div>
+            `;
+        });
+
+        // 4. SYSTÈME DE LOG VISUEL
+        function addLog(message, color = "#89b4fa") {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.borderLeftColor = color;
+            entry.innerHTML = message;
+            
+            logBox.appendChild(entry);
+
+            // Suppression automatique après 10 secondes
+            setTimeout(() => {
+                entry.style.opacity = "0";
+                setTimeout(() => entry.remove(), 1000);
+            }, 10000);
+        }
+
+        function triggerDeathLink() {
+            const dl = document.getElementById('deathlink-overlay');
+            dl.style.display = 'flex';
+            dl.style.animation = 'flash 4s ease-out forwards';
+            setTimeout(() => { dl.style.display = 'none'; dl.style.animation = ''; }, 4000);
+        }
+
+        // 5. CONNEXION AU SERVEUR ARCHIPELAGO (WEBSOCKET)
+        if (config.server && config.slot) {
+            const wsURL = config.server.startsWith('wss://') ? config.server : `wss://${config.server}`;
+            let ws = new WebSocket(wsURL);
+
+            ws.onopen = () => {
+                addLog("🟢 Connecté au serveur Archipelago", "#a6e3a1");
+                
+                // Envoi du paquet de connexion AP
+                ws.send(JSON.stringify([{
+                    cmd: 'Connect',
+                    password: '',
+                    name: config.slot,
+                    version: { major: 0, minor: 4, build: 4, class: 'Version' },
+                    tags: ['Tracker', 'DeathLink'], // On s'inscrit au DeathLink
+                    items_handling: 0
+                }]));
+            };
+
+            ws.onmessage = (event) => {
+                const packets = JSON.parse(event.data);
+                
+                packets.forEach(packet => {
+                    // Si on reçoit des données d'objets ou de chat
+                    if (packet.cmd === 'PrintJSON') {
+                        // Reconstitution basique du texte à partir du JSON d'Archipelago
+                        let textMessage = "";
+                        if(packet.data) {
+                            packet.data.forEach(part => { textMessage += part.text || ""; });
+                        } else if (packet.text) {
+                            textMessage = packet.text;
+                        }
+                        
+                        // On ignore les logs trop techniques
+                        if(textMessage && !textMessage.startsWith("Connection")) {
+                            // Si le mot 'found' ou 'sent' est là, c'est un objet (bleu), sinon c'est du système (gris)
+                            let color = textMessage.includes("found") ? "#f9e2af" : "#bac2de";
+                            addLog(textMessage, color);
+                        }
+                    }
+
+                    // Détection du DeathLink (Mécanique AP : Quelqu'un meurt = tout le monde meurt)
+                    if (packet.cmd === 'Bounced' && packet.tags && packet.tags.includes('DeathLink')) {
+                        const source = packet.data ? packet.data.source : "Quelqu'un";
+                        addLog(`💀 <b>${source}</b> a déclenché un DeathLink !`, "#f38ba8");
+                        triggerDeathLink();
+                    }
+                    
+                    // Mise à jour de la pastille de connexion des joueurs
+                    if (packet.cmd === 'RoomInfo' && packet.players) {
+                       // Logique avancée possible ici pour lier l'ID AP au nom
+                    }
+                });
+            };
+
+            ws.onclose = () => {
+                addLog("🔴 Déconnecté du serveur.", "#f38ba8");
+            };
+
+            ws.onerror = () => {
+                addLog("⚠️ Erreur de connexion au WebSocket.", "#f9e2af");
+            };
+        }
+    </script>
+</body>
+</html>
