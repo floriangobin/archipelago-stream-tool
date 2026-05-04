@@ -2,44 +2,38 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Archipelago - Control Panel V2</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 40px; }
-        .container { max-width: 800px; margin: auto; background: #313244; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { text-align: center; color: #89b4fa; }
-        .section { background: #181825; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #45475a; }
-        label { display: block; margin-top: 10px; font-weight: bold; color: #a6e3a1; }
-        input[type="text"] { width: 100%; padding: 10px; margin-top: 5px; background: #11111b; border: 1px solid #585b70; color: #cdd6f4; border-radius: 4px; box-sizing: border-box; }
-        button { background: #89b4fa; color: #11111b; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; margin-top: 20px; transition: 0.2s; }
-        button:hover { background: #74c7ec; }
-        .btn-add { background: #a6e3a1; margin-top: 10px; width: auto; }
-        .btn-remove { background: #f38ba8; margin: 0; width: auto; }
-        .player-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-        .player-row input { margin-top: 0; }
-        textarea { width: 100%; height: 80px; margin-top: 10px; background: #11111b; color: #f38ba8; border: 1px solid #585b70; border-radius: 4px; padding: 10px; font-family: monospace; resize: none; box-sizing: border-box; }
-        .options-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    </style>
+    <title>Archipelago - Control Panel V3</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-
+<body class="panel-mode">
 <div class="container">
-    <h1>🎮 AP Stream Setup V2</h1>
+    <h1>🎮 AP Stream Setup V3</h1>
     
     <div class="section">
         <h2>1. Serveur & Options</h2>
-        <label>Serveur Archipelago (ex: archipelago.gg:38281)</label>
+        <label>Serveur Archipelago</label>
         <input type="text" id="ap-server" placeholder="archipelago.gg:38281">
         <label>Ton pseudo en jeu (Slot Name)</label>
         <input type="text" id="ap-slot" placeholder="MonPseudo">
-        
-        <div class="options-row">
-            <input type="checkbox" id="enable-sounds" checked>
-            <label style="margin:0; color:#cdd6f4;">Activer les effets sonores (Objets & DeathLink)</label>
+        <label style="margin-top:15px;"><input type="checkbox" id="enable-sounds" checked> Activer les effets sonores</label>
+    </div>
+
+    <div class="section">
+        <h2>2. Personnalisation (Design)</h2>
+        <div style="display: flex; gap: 20px;">
+            <div style="flex:1;">
+                <label>Couleur Principale (Bordures)</label>
+                <input type="color" id="color-accent" value="#89b4fa">
+            </div>
+            <div style="flex:1;">
+                <label>Couleur des Objets (Tracker)</label>
+                <input type="color" id="color-item" value="#f9e2af">
+            </div>
         </div>
     </div>
 
     <div class="section" id="players-section">
-        <h2>2. Vidéos des Joueurs</h2>
+        <h2>3. Vidéos des Joueurs</h2>
         <div id="players-list"></div>
         <button class="btn-add" onclick="addPlayer()">+ Ajouter un joueur</button>
     </div>
@@ -47,84 +41,10 @@
     <button onclick="generateLink()">Générer le lien magique OBS</button>
 
     <div class="section" style="margin-top: 20px;">
-        <h2>3. URL OBS</h2>
+        <h2>Lien OBS (1920x1080)</h2>
         <textarea id="obs-link" readonly placeholder="Cliquez sur Générer..."></textarea>
     </div>
 </div>
-
-<script>
-    // --- GESTION DE LA SAUVEGARDE (LOCAL STORAGE) ---
-    function saveConfig() {
-        const players = [];
-        document.querySelectorAll('.player-row').forEach(row => {
-            players.push({
-                name: row.querySelector('.p-name').value,
-                link: row.querySelector('.p-link').value
-            });
-        });
-        const config = {
-            server: document.getElementById('ap-server').value,
-            slot: document.getElementById('ap-slot').value,
-            sounds: document.getElementById('enable-sounds').checked,
-            players: players
-        };
-        localStorage.setItem('apSetupV2', JSON.stringify(config));
-    }
-
-    function loadConfig() {
-        const saved = localStorage.getItem('apSetupV2');
-        if (saved) {
-            const config = JSON.parse(saved);
-            document.getElementById('ap-server').value = config.server || '';
-            document.getElementById('ap-slot').value = config.slot || '';
-            document.getElementById('enable-sounds').checked = config.sounds !== false;
-            
-            if (config.players && config.players.length > 0) {
-                config.players.forEach(p => addPlayer(p.name, p.link));
-            } else { addPlayer(); }
-        } else { addPlayer(); }
-    }
-
-    // --- INTERFACE ---
-    function addPlayer(name = '', link = '') {
-        const div = document.createElement('div');
-        div.className = 'player-row';
-        div.innerHTML = `
-            <input type="text" placeholder="Pseudo" class="p-name" value="${name}" onchange="saveConfig()">
-            <input type="text" placeholder="Lien Vidéo" class="p-link" value="${link}" onchange="saveConfig()">
-            <button class="btn-remove" onclick="this.parentElement.remove(); saveConfig();">X</button>
-        `;
-        document.getElementById('players-list').appendChild(div);
-    }
-
-    // Sauvegarde à chaque modification de texte
-    document.getElementById('ap-server').addEventListener('change', saveConfig);
-    document.getElementById('ap-slot').addEventListener('change', saveConfig);
-    document.getElementById('enable-sounds').addEventListener('change', saveConfig);
-
-    window.onload = loadConfig;
-
-    // --- GÉNÉRATION DU LIEN ---
-    function generateLink() {
-        saveConfig(); // On s'assure que tout est sauvegardé
-        const saved = JSON.parse(localStorage.getItem('apSetupV2'));
-        
-        // Nettoyage de l'adresse du serveur
-        saved.server = saved.server.replace('wss://', '').replace('ws://', '');
-        
-        const encodedConfig = btoa(encodeURIComponent(JSON.stringify(saved)));
-        
-        let urlBase = window.location.href.split('?')[0];
-        if (!urlBase.includes('index.html')) {
-            if (!urlBase.endsWith('/')) urlBase += '/';
-            urlBase += 'overlay.html';
-        } else {
-            urlBase = urlBase.replace('index.html', 'overlay.html');
-        }
-        
-        document.getElementById('obs-link').value = `${urlBase}?data=${encodedConfig}`;
-    }
-</script>
-
+<script src="js/panel.js"></script>
 </body>
 </html>
