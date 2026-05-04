@@ -1,47 +1,76 @@
 :root {
-    --bg-color: #1e1e2e;
-    --panel-bg: #313244;
+    --bg-color: #0f0f14;
+    --panel-bg: #1e1e2e;
     --accent: #89b4fa;
     --text: #cdd6f4;
     --success: #a6e3a1;
     --danger: #f38ba8;
     --item: #f9e2af;
+    --hint: #cba6f7;
+    --surface: #313244;
 }
 
-/* Base */
-body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; box-sizing: border-box; color: var(--text); }
+body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; box-sizing: border-box; color: var(--text); }
 
-/* --- Control Panel --- */
-body.panel-mode { background: var(--bg-color); padding: 40px; }
-.container { max-width: 800px; margin: auto; background: var(--panel-bg); padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-h1, h2 { color: var(--accent); margin-top: 0; }
-.section { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-label { display: block; margin-top: 10px; font-weight: bold; color: var(--success); }
-input[type="text"], input[type="color"] { width: 100%; padding: 10px; margin-top: 5px; background: #11111b; border: 1px solid #585b70; color: var(--text); border-radius: 4px; box-sizing: border-box; }
+/* --- Control Panel (Dashboard Mode) --- */
+body.panel-mode { background: var(--bg-color); padding: 20px; display: flex; height: 100vh; overflow: hidden; gap: 20px; }
+
+/* Colonne de gauche (Réglages) */
+.controls-sidebar { flex: 0 0 450px; background: var(--panel-bg); border-radius: 12px; padding: 20px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.controls-sidebar::-webkit-scrollbar { width: 8px; }
+.controls-sidebar::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 4px; }
+
+/* Colonne de droite (Preview) */
+.preview-area { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.preview-container { flex: 1; background: #000; border-radius: 12px; border: 2px dashed var(--surface); position: relative; overflow: hidden; }
+#preview-frame { width: 100%; height: 100%; border: none; }
+
+h1, h2, h3 { color: var(--accent); margin-top: 0; }
+.section { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--surface); }
+
+label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9em; color: var(--text); }
+input[type="text"], input[type="color"] { width: 100%; padding: 10px; margin-top: 5px; background: #11111b; border: 1px solid var(--surface); color: var(--text); border-radius: 4px; box-sizing: border-box; }
 input[type="color"] { height: 40px; padding: 2px; cursor: pointer; }
-button { background: var(--accent); color: #11111b; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px; transition: 0.2s; }
-button:hover { filter: brightness(1.2); }
-.btn-add { background: var(--success); margin-top: 10px; width: auto; }
-.btn-remove { background: var(--danger); margin: 0; width: auto; }
-.player-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-.player-row input { margin-top: 0; }
-textarea { width: 100%; height: 80px; margin-top: 10px; background: #11111b; color: var(--danger); border: 1px solid #585b70; border-radius: 4px; padding: 10px; resize: none; box-sizing: border-box; }
 
-/* --- Overlay OBS --- */
-body.overlay-mode { background: transparent; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; flex-grow: 1; align-content: start; }
-.video-box { background: rgba(17, 17, 27, 0.9); border: 3px solid var(--accent); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s; }
-.video-box.highlight { border-color: var(--item); box-shadow: 0 0 25px var(--item); }
+button { background: var(--accent); color: #11111b; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; transition: 0.2s; }
+button:hover { filter: brightness(1.2); }
+.btn-success { background: var(--success); }
+.btn-danger { background: var(--danger); width: auto; margin: 0; }
+
+.player-row { display: flex; gap: 5px; margin-top: 10px; align-items: center; background: #11111b; padding: 5px; border-radius: 6px; }
+.player-row input { margin-top: 0; border: none; background: transparent; }
+
+textarea { width: 100%; height: 60px; margin-top: 10px; background: #11111b; color: var(--success); border: 1px solid var(--surface); border-radius: 4px; padding: 10px; resize: none; font-family: monospace; box-sizing: border-box; }
+
+/* Toggles (Interrupteurs) */
+.toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.toggle-row:last-child { border-bottom: none; }
+.switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--surface); transition: .4s; border-radius: 20px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--success); }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* --- Overlay OBS (Reste globalement identique à la V4) --- */
+body.overlay-mode { background: transparent; height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; padding: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; flex-grow: 1; align-content: start; perspective: 1000px; }
+.video-box { background: rgba(17, 17, 27, 0.9); border: 3px solid var(--accent); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; z-index: 1; }
+.video-box.focus { transform: scale(1.05) translateY(-10px); z-index: 50; border-color: var(--item); box-shadow: 0 15px 35px rgba(249, 226, 175, 0.4); }
 .video-header { background: rgba(0,0,0,0.5); padding: 8px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
 .player-info { display: flex; align-items: center; gap: 10px; }
-.item-counter { background: var(--item); color: #000; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+.item-counter { background: var(--item); color: #000; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; transition: transform 0.2s; }
 .status-dot { height: 10px; width: 10px; background-color: var(--danger); border-radius: 50%; transition: 0.3s; }
 .status-dot.online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
 .iframe-container { width: 100%; aspect-ratio: 16 / 9; background: #000; }
 iframe { width: 100%; height: 100%; border: none; }
-.log-container { position: absolute; bottom: 20px; left: 20px; width: 450px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+.log-container { position: absolute; bottom: 20px; left: 20px; width: 400px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
 .log-entry { background: rgba(24, 24, 37, 0.95); padding: 10px 15px; border-left: 4px solid var(--accent); border-radius: 4px; font-size: 14px; text-shadow: 1px 1px 2px black; animation: slideIn 0.3s ease-out; opacity: 1; transition: 1s; }
+#hint-hud { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(24, 24, 37, 0.95); border: 2px solid var(--hint); border-radius: 8px; padding: 15px 25px; box-shadow: 0 0 20px rgba(203, 166, 247, 0.5); display: none; flex-direction: column; align-items: center; gap: 10px; z-index: 100; max-width: 600px; text-align: center; animation: dropDown 0.5s ease-out; }
+#hint-hud h3 { margin: 0; color: var(--hint); text-transform: uppercase; font-size: 14px; letter-spacing: 2px; }
+#hint-hud p { margin: 0; font-size: 16px; font-weight: bold; color: white; }
 #deathlink-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 0, 0, 0.4); border: 15px solid red; z-index: 100; display: none; justify-content: center; align-items: center; box-sizing: border-box; }
 #deathlink-overlay h1 { color: white; font-size: 80px; text-shadow: 0 0 20px red; font-weight: 900; letter-spacing: 5px; }
 @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes dropDown { from { transform: translate(-50%, -50px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 @keyframes flash { 0% { opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }

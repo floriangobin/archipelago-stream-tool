@@ -2,49 +2,74 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Archipelago - Control Panel V3</title>
+    <title>Archipelago - Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="panel-mode">
-<div class="container">
-    <h1>🎮 AP Stream Setup V3</h1>
-    
-    <div class="section">
-        <h2>1. Serveur & Options</h2>
-        <label>Serveur Archipelago</label>
-        <input type="text" id="ap-server" placeholder="archipelago.gg:38281">
-        <label>Ton pseudo en jeu (Slot Name)</label>
-        <input type="text" id="ap-slot" placeholder="MonPseudo">
-        <label style="margin-top:15px;"><input type="checkbox" id="enable-sounds" checked> Activer les effets sonores</label>
-    </div>
 
-    <div class="section">
-        <h2>2. Personnalisation (Design)</h2>
-        <div style="display: flex; gap: 20px;">
-            <div style="flex:1;">
-                <label>Couleur Principale (Bordures)</label>
-                <input type="color" id="color-accent" value="#89b4fa">
+    <!-- Colonne de Gauche : Réglages -->
+    <div class="controls-sidebar">
+        <h2>🛠 AP Dashboard</h2>
+        
+        <div class="section">
+            <h3>Serveur</h3>
+            <input type="text" id="ap-server" placeholder="archipelago.gg:38281" oninput="updatePreview()">
+            <input type="text" id="ap-slot" placeholder="Ton Pseudo (Slot Name)" oninput="updatePreview()">
+        </div>
+
+        <div class="section">
+            <h3>Modules</h3>
+            <div class="toggle-row">
+                <span>🔊 Effets Sonores</span>
+                <label class="switch"><input type="checkbox" id="opt-sounds" checked onchange="updatePreview()"><span class="slider"></span></label>
             </div>
-            <div style="flex:1;">
-                <label>Couleur des Objets (Tracker)</label>
-                <input type="color" id="color-item" value="#f9e2af">
+            <div class="toggle-row">
+                <span>📝 Afficher le Log (Texte)</span>
+                <label class="switch"><input type="checkbox" id="opt-log" checked onchange="updatePreview()"><span class="slider"></span></label>
             </div>
+            <div class="toggle-row">
+                <span>🎬 Auto-Réalisateur (Zoom)</span>
+                <label class="switch"><input type="checkbox" id="opt-focus" checked onchange="updatePreview()"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+                <span>🔍 Panneau des Indices (Hints)</span>
+                <label class="switch"><input type="checkbox" id="opt-hints" checked onchange="updatePreview()"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+                <span>💀 Alerte DeathLink</span>
+                <label class="switch"><input type="checkbox" id="opt-deathlink" checked onchange="updatePreview()"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Design</h3>
+            <div style="display: flex; gap: 10px;">
+                <input type="color" id="color-accent" value="#89b4fa" onchange="updatePreview()" title="Couleur Principale">
+                <input type="color" id="color-item" value="#f9e2af" onchange="updatePreview()" title="Couleur Objets">
+            </div>
+        </div>
+
+        <div class="section" id="players-section">
+            <h3>Vidéos des Joueurs</h3>
+            <div id="players-list"></div>
+            <button class="btn-success" onclick="addPlayer(); updatePreview();">+ Ajouter Joueur</button>
+        </div>
+
+        <div class="section">
+            <h3>Lien OBS (1920x1080)</h3>
+            <textarea id="obs-link" readonly onclick="this.select()"></textarea>
+            <button onclick="shareConfig()">🤝 Copier le lien coopératif (Partage)</button>
         </div>
     </div>
 
-    <div class="section" id="players-section">
-        <h2>3. Vidéos des Joueurs</h2>
-        <div id="players-list"></div>
-        <button class="btn-add" onclick="addPlayer()">+ Ajouter un joueur</button>
+    <!-- Colonne de Droite : Live Preview -->
+    <div class="preview-area">
+        <h3 style="margin:0; color:var(--text);">📺 Rendu en direct</h3>
+        <div class="preview-container">
+            <iframe id="preview-frame"></iframe>
+        </div>
     </div>
 
-    <button onclick="generateLink()">Générer le lien magique OBS</button>
-
-    <div class="section" style="margin-top: 20px;">
-        <h2>Lien OBS (1920x1080)</h2>
-        <textarea id="obs-link" readonly placeholder="Cliquez sur Générer..."></textarea>
-    </div>
-</div>
-<script src="js/panel.js"></script>
+    <script src="js/panel.js"></script>
 </body>
 </html>

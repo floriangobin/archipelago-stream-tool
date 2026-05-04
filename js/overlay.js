@@ -1,25 +1,38 @@
 const urlParams = new URLSearchParams(window.location.search);
 const encodedData = urlParams.get('data');
+const isPreview = urlParams.get('preview') === 'true'; // Détecte si on est dans le dashboard
+
 if (!encodedData) throw new Error("No data");
 
 const config = JSON.parse(decodeURIComponent(atob(encodedData)));
+const opts = config.opts || { sounds:true, log:true, focus:true, hints:true, deathlink:true };
+
 const grid = document.getElementById('video-grid');
 const logBox = document.getElementById('log-box');
-const itemCounts = {}; // Dictionnaire pour le tracker
+const itemCounts = {}; 
 
-// Application des couleurs personnalisées
+// Application des options visuelles
 document.documentElement.style.setProperty('--accent', config.colorAccent || '#89b4fa');
 document.documentElement.style.setProperty('--item', config.colorItem || '#f9e2af');
+if (!opts.log) logBox.style.display = 'none';
 
-// Audio
+// HUD Indices
+const hintHud = document.createElement('div');
+hintHud.id = 'hint-hud';
+hintHud.innerHTML = `<h3>🔍 Nouvel Indice</h3><p id="hint-text"></p>`;
+if (opts.hints) document.body.appendChild(hintHud);
+
+// Audio (Forcé au silence en mode Preview pour éviter l'écho)
 const sfxItem = new Audio('https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg');
 const sfxDeath = new Audio('https://actions.google.com/sounds/v1/alarms/spaceship_alarm.ogg');
-sfxItem.volume = 0.5; sfxDeath.volume = 0.6;
+const sfxHint = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
+sfxItem.volume = 0.5; sfxDeath.volume = 0.6; sfxHint.volume = 0.7;
 
 function playSound(type) {
-    if (!config.sounds) return;
+    if (!opts.sounds || isPreview) return;
     if (type === 'item') { sfxItem.currentTime = 0; sfxItem.play().catch(()=>{}); }
     if (type === 'death') { sfxDeath.currentTime = 0; sfxDeath.play().catch(()=>{}); }
+    if (type === 'hint') { sfxHint.currentTime = 0; sfxHint.play().catch(()=>{}); }
 }
 
 function sanitizeId(name) { return 'p-' + name.replace(/[^a-zA-Z0-9]/g, '-'); }
@@ -37,12 +50,11 @@ function getIframeSrc(link) {
     return link;
 }
 
-// Génération de la grille et du Tracker
 config.players.forEach(player => {
     if(!player.name) return;
-    itemCounts[player.name] = 0; // Initialise le compteur à 0
+    itemCounts[player.name] = 0; 
     const imgSrc = getIframeSrc(player.link);
-    const content = imgSrc ? `<iframe src="${imgSrc}" allow="autoplay"></iframe>` : `<div style="display:flex; height:100%; align-items:center; justify-content:center;">Pas de flux vidéo</div>`;
+    const content = imgSrc ? `<iframe src="${imgSrc}" allow="autoplay"></iframe>` : `<div style="display:flex; height:100%; align-items:center; justify-content:center; color: #585b70;">Vidéo</div>`;
     const playerId = sanitizeId(player.name);
     
     grid.innerHTML += `
@@ -60,6 +72,7 @@ config.players.forEach(player => {
 });
 
 function addLog(message, color = "var(--accent)") {
+    if(!opts.log) return;
     const entry = document.createElement('div');
     entry.className = 'log-entry';
     entry.style.borderLeftColor = color;
@@ -68,18 +81,40 @@ function addLog(message, color = "var(--accent)") {
     setTimeout(() => { entry.style.opacity = "0"; setTimeout(() => entry.remove(), 1000); }, 10000);
 }
 
+function focusPlayer(playerName) {
+    if(!opts.focus) return;
+    const box = document.getElementById(`box-${sanitizeId(playerName)}`);
+    if (box) {
+        document.querySelectorAll('.video-box').forEach(b => b.classList.remove('focus'));
+        box.classList.add('focus');
+        setTimeout(() => box.classList.remove('focus'), 6000);
+    }
+}
+
+let hintTimeout;
+function showHintHUD(hintText) {
+    if(!opts.hints) return;
+    playSound('hint');
+    const hud = document.getElementById('hint-hud');
+    document.getElementById('hint-text').innerHTML = hintText;
+    hud.style.display = 'flex';
+    clearTimeout(hintTimeout);
+    hintTimeout = setTimeout(() => {
+        hud.style.opacity = "0";
+        setTimeout(() => { hud.style.display = 'none'; hud.style.opacity = "1"; }, 500);
+    }, 15000);
+}
+
 function updateTracker(playerName) {
     if (itemCounts[playerName] !== undefined) {
         itemCounts[playerName]++;
         document.getElementById(`counter-${sanitizeId(playerName)}`).innerText = `${itemCounts[playerName]} 🎁`;
-        
-        const box = document.getElementById(`box-${sanitizeId(playerName)}`);
-        box.classList.add('highlight');
-        setTimeout(() => box.classList.remove('highlight'), 4000);
+        focusPlayer(playerName);
     }
 }
 
 function triggerDeathLink() {
+    if(!opts.deathlink) return;
     playSound('death');
     const dl = document.getElementById('deathlink-overlay');
     dl.style.display = 'flex';
@@ -91,7 +126,12 @@ function triggerDeathLink() {
 let ws;
 let reconnectTimeout;
 function connectAP() {
-    if (!config.server || !config.slot) return;
+    // Si on est juste dans la fenêtre de Preview, on simule la connexion sans charger le serveur
+    if (isPreview || !config.server || !config.slot) {
+        if(isPreview) addLog("👁️ Mode Aperçu - En attente d'OBS", "var(--success)");
+        return; 
+    }
+    
     const wsURL = config.server.startsWith('ws') ? config.server : `wss://${config.server}`;
     ws = new WebSocket(wsURL);
 
@@ -114,6 +154,11 @@ function connectAP() {
                 else if (packet.text) textMessage = packet.text;
                 
                 if(textMessage && !textMessage.startsWith("Connection")) {
+                    if (textMessage.toLowerCase().includes("hint") || textMessage.includes("is in") || textMessage.includes("trouve")) {
+                        showHintHUD(textMessage);
+                        addLog(textMessage, "var(--hint)");
+                        return;
+                    }
                     let isItem = textMessage.includes("found");
                     addLog(textMessage, isItem ? "var(--item)" : "var(--text)");
                     
@@ -134,7 +179,7 @@ function connectAP() {
     };
 
     ws.onclose = () => {
-        addLog("🔴 Déconnecté. Reconnexion dans 5s...", "var(--danger)");
+        addLog("🔴 Déconnecté. Reconnexion...", "var(--danger)");
         reconnectTimeout = setTimeout(connectAP, 5000);
     };
     ws.onerror = () => { ws.close(); };
