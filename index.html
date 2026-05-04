@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Archipelago - Control Panel</title>
+    <title>Archipelago - Control Panel V2</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 40px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 40px; }
         .container { max-width: 800px; margin: auto; background: #313244; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h1 { text-align: center; color: #89b4fa; }
         .section { background: #181825; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #45475a; }
@@ -13,76 +13,108 @@
         button { background: #89b4fa; color: #11111b; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; margin-top: 20px; transition: 0.2s; }
         button:hover { background: #74c7ec; }
         .btn-add { background: #a6e3a1; margin-top: 10px; width: auto; }
+        .btn-remove { background: #f38ba8; margin: 0; width: auto; }
         .player-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
         .player-row input { margin-top: 0; }
         textarea { width: 100%; height: 80px; margin-top: 10px; background: #11111b; color: #f38ba8; border: 1px solid #585b70; border-radius: 4px; padding: 10px; font-family: monospace; resize: none; box-sizing: border-box; }
+        .options-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🎮 AP Stream Overlay Setup</h1>
+    <h1>🎮 AP Stream Setup V2</h1>
     
     <div class="section">
-        <h2>1. Connexion au Serveur</h2>
+        <h2>1. Serveur & Options</h2>
         <label>Serveur Archipelago (ex: archipelago.gg:38281)</label>
-        <input type="text" id="ap-server" placeholder="archipelago.gg:38281" required>
+        <input type="text" id="ap-server" placeholder="archipelago.gg:38281">
         <label>Ton pseudo en jeu (Slot Name)</label>
-        <input type="text" id="ap-slot" placeholder="MonPseudo" required>
+        <input type="text" id="ap-slot" placeholder="MonPseudo">
+        
+        <div class="options-row">
+            <input type="checkbox" id="enable-sounds" checked>
+            <label style="margin:0; color:#cdd6f4;">Activer les effets sonores (Objets & DeathLink)</label>
+        </div>
     </div>
 
     <div class="section" id="players-section">
-        <h2>2. Vidéos des Joueurs (Amis)</h2>
-        <p style="font-size: 0.9em; color: #bac2de;">Laissez le lien vide pour ne pas afficher de vidéo. Twitch, YouTube et VDO.Ninja sont supportés.</p>
-        <div id="players-list">
-            <!-- Les joueurs s'ajouteront ici -->
-        </div>
+        <h2>2. Vidéos des Joueurs</h2>
+        <div id="players-list"></div>
         <button class="btn-add" onclick="addPlayer()">+ Ajouter un joueur</button>
     </div>
 
     <button onclick="generateLink()">Générer le lien magique OBS</button>
 
     <div class="section" style="margin-top: 20px;">
-        <h2>3. URL à coller dans la Source Navigateur OBS</h2>
-        <p style="font-size: 0.9em; color: #bac2de;">Dimensions recommandées : 1920x1080</p>
-        <textarea id="obs-link" readonly placeholder="Le lien apparaîtra ici..."></textarea>
+        <h2>3. URL OBS</h2>
+        <textarea id="obs-link" readonly placeholder="Cliquez sur Générer..."></textarea>
     </div>
 </div>
 
 <script>
-    // Ajoute un joueur par défaut au chargement
-    window.onload = () => addPlayer();
+    // --- GESTION DE LA SAUVEGARDE (LOCAL STORAGE) ---
+    function saveConfig() {
+        const players = [];
+        document.querySelectorAll('.player-row').forEach(row => {
+            players.push({
+                name: row.querySelector('.p-name').value,
+                link: row.querySelector('.p-link').value
+            });
+        });
+        const config = {
+            server: document.getElementById('ap-server').value,
+            slot: document.getElementById('ap-slot').value,
+            sounds: document.getElementById('enable-sounds').checked,
+            players: players
+        };
+        localStorage.setItem('apSetupV2', JSON.stringify(config));
+    }
 
-    function addPlayer() {
+    function loadConfig() {
+        const saved = localStorage.getItem('apSetupV2');
+        if (saved) {
+            const config = JSON.parse(saved);
+            document.getElementById('ap-server').value = config.server || '';
+            document.getElementById('ap-slot').value = config.slot || '';
+            document.getElementById('enable-sounds').checked = config.sounds !== false;
+            
+            if (config.players && config.players.length > 0) {
+                config.players.forEach(p => addPlayer(p.name, p.link));
+            } else { addPlayer(); }
+        } else { addPlayer(); }
+    }
+
+    // --- INTERFACE ---
+    function addPlayer(name = '', link = '') {
         const div = document.createElement('div');
         div.className = 'player-row';
         div.innerHTML = `
-            <input type="text" placeholder="Pseudo" class="p-name">
-            <input type="text" placeholder="Lien (Twitch, VDO...)" class="p-link">
-            <button onclick="this.parentElement.remove()" style="margin:0; width:auto; background:#f38ba8;">X</button>
+            <input type="text" placeholder="Pseudo" class="p-name" value="${name}" onchange="saveConfig()">
+            <input type="text" placeholder="Lien Vidéo" class="p-link" value="${link}" onchange="saveConfig()">
+            <button class="btn-remove" onclick="this.parentElement.remove(); saveConfig();">X</button>
         `;
         document.getElementById('players-list').appendChild(div);
     }
 
-    function generateLink() {
-        const server = document.getElementById('ap-server').value.replace('wss://', '');
-        const slot = document.getElementById('ap-slot').value;
-        
-        const players = [];
-        document.querySelectorAll('.player-row').forEach(row => {
-            const name = row.querySelector('.p-name').value;
-            const link = row.querySelector('.p-link').value;
-            if (name) players.push({ name, link });
-        });
+    // Sauvegarde à chaque modification de texte
+    document.getElementById('ap-server').addEventListener('change', saveConfig);
+    document.getElementById('ap-slot').addEventListener('change', saveConfig);
+    document.getElementById('enable-sounds').addEventListener('change', saveConfig);
 
-        // Création d'un objet de configuration complet
-        const config = { server, slot, players };
+    window.onload = loadConfig;
+
+    // --- GÉNÉRATION DU LIEN ---
+    function generateLink() {
+        saveConfig(); // On s'assure que tout est sauvegardé
+        const saved = JSON.parse(localStorage.getItem('apSetupV2'));
         
-        // On encode l'objet en Base64
-        const encodedConfig = btoa(encodeURIComponent(JSON.stringify(config)));
+        // Nettoyage de l'adresse du serveur
+        saved.server = saved.server.replace('wss://', '').replace('ws://', '');
         
-        // CORRECTION : Détection robuste de l'URL pour GitHub Pages
-        let urlBase = window.location.href.split('?')[0]; // Enlève les paramètres au cas où
+        const encodedConfig = btoa(encodeURIComponent(JSON.stringify(saved)));
+        
+        let urlBase = window.location.href.split('?')[0];
         if (!urlBase.includes('index.html')) {
             if (!urlBase.endsWith('/')) urlBase += '/';
             urlBase += 'overlay.html';
@@ -90,8 +122,7 @@
             urlBase = urlBase.replace('index.html', 'overlay.html');
         }
         
-        const lienFinal = `${urlBase}?data=${encodedConfig}`;
-        document.getElementById('obs-link').value = lienFinal;
+        document.getElementById('obs-link').value = `${urlBase}?data=${encodedConfig}`;
     }
 </script>
 
