@@ -1,19 +1,27 @@
 const urlParams = new URLSearchParams(window.location.search);
 const encodedData = urlParams.get('data');
-const isPreview = urlParams.get('preview') === 'true'; // Détecte si on est dans le dashboard
+const isPreview = urlParams.get('preview') === 'true';
 
 if (!encodedData) throw new Error("No data");
 
 const config = JSON.parse(decodeURIComponent(atob(encodedData)));
 const opts = config.opts || { sounds:true, log:true, focus:true, hints:true, deathlink:true };
+const design = config.design || { layout: 'layout-grid', font: "'Segoe UI', sans-serif", radius: '12', bgImage: '', colorAccent: '#89b4fa', colorItem: '#f9e2af' };
 
 const grid = document.getElementById('video-grid');
 const logBox = document.getElementById('log-box');
 const itemCounts = {}; 
 
-// Application des options visuelles
-document.documentElement.style.setProperty('--accent', config.colorAccent || '#89b4fa');
-document.documentElement.style.setProperty('--item', config.colorItem || '#f9e2af');
+// --- APPLICATION DU DESIGN DYNAMIQUE ---
+document.body.classList.add(design.layout);
+document.documentElement.style.setProperty('--accent', design.colorAccent);
+document.documentElement.style.setProperty('--item', design.colorItem);
+document.documentElement.style.setProperty('--overlay-font', design.font);
+document.documentElement.style.setProperty('--box-radius', `${design.radius}px`);
+
+if (design.bgImage && !isPreview) {
+    document.documentElement.style.setProperty('--overlay-bg', `url('${design.bgImage}')`);
+}
 if (!opts.log) logBox.style.display = 'none';
 
 // HUD Indices
@@ -22,7 +30,6 @@ hintHud.id = 'hint-hud';
 hintHud.innerHTML = `<h3>🔍 Nouvel Indice</h3><p id="hint-text"></p>`;
 if (opts.hints) document.body.appendChild(hintHud);
 
-// Audio (Forcé au silence en mode Preview pour éviter l'écho)
 const sfxItem = new Audio('https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg');
 const sfxDeath = new Audio('https://actions.google.com/sounds/v1/alarms/spaceship_alarm.ogg');
 const sfxHint = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
@@ -54,7 +61,7 @@ config.players.forEach(player => {
     if(!player.name) return;
     itemCounts[player.name] = 0; 
     const imgSrc = getIframeSrc(player.link);
-    const content = imgSrc ? `<iframe src="${imgSrc}" allow="autoplay"></iframe>` : `<div style="display:flex; height:100%; align-items:center; justify-content:center; color: #585b70;">Vidéo</div>`;
+    const content = imgSrc ? `<iframe src="${imgSrc}" allow="autoplay"></iframe>` : `<div style="display:flex; height:100%; align-items:center; justify-content:center; color: #585b70; text-align:center; padding: 20px;">En attente de flux</div>`;
     const playerId = sanitizeId(player.name);
     
     grid.innerHTML += `
@@ -126,11 +133,7 @@ function triggerDeathLink() {
 let ws;
 let reconnectTimeout;
 function connectAP() {
-    // Si on est juste dans la fenêtre de Preview, on simule la connexion sans charger le serveur
-    if (isPreview || !config.server || !config.slot) {
-        if(isPreview) addLog("👁️ Mode Aperçu - En attente d'OBS", "var(--success)");
-        return; 
-    }
+    if (isPreview || !config.server || !config.slot) return; 
     
     const wsURL = config.server.startsWith('ws') ? config.server : `wss://${config.server}`;
     ws = new WebSocket(wsURL);
