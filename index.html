@@ -78,12 +78,20 @@
         // Création d'un objet de configuration complet
         const config = { server, slot, players };
         
-        // On encode l'objet en Base64 pour le cacher proprement dans l'URL
+        // On encode l'objet en Base64
         const encodedConfig = btoa(encodeURIComponent(JSON.stringify(config)));
         
-        // Construction de l'URL finale pointant vers l'overlay
-        const baseURL = window.location.href.replace('index.html', 'overlay.html');
-        document.getElementById('obs-link').value = `${baseURL}?data=${encodedConfig}`;
+        // CORRECTION : Détection robuste de l'URL pour GitHub Pages
+        let urlBase = window.location.href.split('?')[0]; // Enlève les paramètres au cas où
+        if (!urlBase.includes('index.html')) {
+            if (!urlBase.endsWith('/')) urlBase += '/';
+            urlBase += 'overlay.html';
+        } else {
+            urlBase = urlBase.replace('index.html', 'overlay.html');
+        }
+        
+        const lienFinal = `${urlBase}?data=${encodedConfig}`;
+        document.getElementById('obs-link').value = lienFinal;
     }
 </script>
 
